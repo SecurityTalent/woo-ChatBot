@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Casio Chatbot</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  background:#f4f4f4;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+}
+.chatbox{
+  width:400px;
+  height:650px;
+  background:#fff;
+  border-radius:10px;
+  display:flex;
+  flex-direction:column;
+  box-shadow:0 10px 30px rgba(0,0,0,.2);
+}
+.header{
+  background:#111827;
+  color:#fff;
+  padding:15px;
+  text-align:center;
+  font-weight:bold;
+}
+.messages{
+  flex:1;
+  padding:15px;
+  overflow-y:auto;
+}
+.msg{margin-bottom:15px}
+.user{text-align:right}
+.user span{
+  background:#2563eb;
+  color:#fff;
+  padding:8px 12px;
+  border-radius:12px;
+  display:inline-block;
+  max-width:80%;
+}
+.bot span{
+  background:#e5e7eb;
+  padding:10px;
+  border-radius:12px;
+  display:inline-block;
+  max-width:90%;
+}
+.product-img{
+  width:100%;
+  max-width:220px;
+  border-radius:8px;
+  margin-bottom:8px;
+}
+.input-box{
+  display:flex;
+  border-top:1px solid #ddd;
+}
+input{
+  flex:1;
+  padding:12px;
+  border:none;
+  outline:none;
+}
+button{
+  padding:0 20px;
+  border:none;
+  background:#2563eb;
+  color:#fff;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div class="chatbox">
+  <div class="header">⌚ Casio Product Chatbot</div>
+
+  <div class="messages" id="messages"></div>
+
+  <div class="input-box">
+    <input id="input" placeholder="Ask in Bangla / Banglish / English…" />
+    <button onclick="send()">Send</button>
+  </div>
+</div>
+
+<script>
+const messages = document.getElementById("messages");
+const input = document.getElementById("input");
+
+function addUser(text){
+  const div=document.createElement("div");
+  div.className="msg user";
+  div.innerHTML=`<span>${text}</span>`;
+  messages.appendChild(div);
+  messages.scrollTop=messages.scrollHeight;
+}
+
+function addBot(html){
+  const div=document.createElement("div");
+  div.className="msg bot";
+  div.innerHTML=`<span>${html}</span>`;
+  messages.appendChild(div);
+  messages.scrollTop=messages.scrollHeight;
+}
+
+async function send(){
+  const text=input.value.trim();
+  if(!text) return;
+
+  addUser(text);
+  input.value="";
+  addBot("Typing…");
+
+  try{
+    const res=await fetch("http://localhost:3333/mcp/search-product",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({ query:text })
+    });
+
+    const data=await res.json();
+    messages.lastChild.remove();
+
+    if(data.count===0){
+      addBot("দুঃখিত 😕 কোনো product পাওয়া যায়নি।");
+      return;
+    }
+
+    const p=data.products[0];
+
+    addBot(`
+<img src="${p.image}" class="product-img">
+<b>${p.title}</b><br>
+💰 <b>Price:</b> ${p.price}<br>
+📦 <b>Stock:</b> ${p.availability}<br><br>
+🔗 <a href="${p.link}" target="_blank">View product</a>
+    `);
+
+  }catch(e){
+    messages.lastChild.remove();
+    addBot("❌ Server error");
+  }
+}
+
+input.addEventListener("keydown",e=>{
+  if(e.key==="Enter") send();
+});
+</script>
+
+</body>
+</html>
